@@ -1,13 +1,18 @@
 # Genel blob algılama ve canlı görüntü
 
-```text
-USB UVC (640×480 YUYV, 30 FPS)
- → V4L2 / PS RGB888 dönüşümü
- → DDR (R,G,B,0) → AXI DMA MM2S
- → Elle yazılmış RTL: soldaki/üstteki piksele RGB farkı
- → AXI DMA S2MM → DDR → PS blob birleştirme
- → ORİJİNAL RGB görüntü üzerinde kutular
- → UDP → PC alım iş parçacığı → OpenCV görüntü
+```mermaid
+flowchart LR
+    A[USB UVC<br/>640×480 YUYV] --> B[V4L2 + BT.601<br/>PS]
+    B --> C[(DDR RGBx)]
+    C --> D[DMA MM2S]
+    D --> E[AXI4-Stream<br/>RTL]
+    E --> F[DMA S2MM]
+    F --> G[(DDR edge map)]
+    G --> H[4×4 hücreler +<br/>connected components]
+    C --> H
+    H --> I[RGB sınıf filtresi +<br/>bounding boxes]
+    I --> J[UDP / GbE]
+    J --> K[PC OpenCV]
 ```
 
 RTL herhangi bir sabit renk sınıfına bağlı değildir. PS'nin canlı
@@ -19,6 +24,22 @@ genel blob kuralıyla değerlendirilebilir. Bu bir nesne tanıma modeli değildi
 
 Eski entegrasyon adı `color_detector_axis` korunur; işlev artık genel RGB
 komşuluk farkıdır. 24 bit giriş: düşük bayt R, sonra G, B.
+
+```mermaid
+flowchart LR
+    AXIIN[s_axis<br/>RGB24 + VALID/LAST/USER] --> S1[Pipeline stage 1<br/>pixel + left pixel]
+    S1 --> DIFFL[max abs channel diff<br/>LEFT]
+    RAM[640 × 24-bit<br/>read-first BRAM] --> DIFFU[max abs channel diff<br/>UP]
+    S1 --> DIFFU
+    S1 --> RAM
+    DIFFL --> S2[Pipeline stage 2]
+    DIFFU --> S2
+    S2 --> AXIOUT[m_axis<br/>0, up, left]
+    READY[m_axis_tready] --> STALL[Global pipeline enable]
+    STALL --> S1
+    STALL --> S2
+    STALL --> RAM
+```
 
 ```text
 left = max(abs(R-R_left), abs(G-G_left), abs(B-B_left))
@@ -33,6 +54,32 @@ senkron read-first BRAM'de tutulur. İki aşamalı pipeline normalde saat başı
 bir piksel kabul eder; backpressure tüm aşamaları tutar. TLAST kare sonudur;
 TUSER değiştirilmeden taşınır. Reset RAM'i temizlemez; ilk-satır işareti eski
 veriyi gizler. HLS kullanılmaz.
+
+AXI4-Stream sözleşmesi şöyledir:
+
+| Sinyal | Davranış |
+|---|---|
+| `TVALID` | Her iki pipeline aşamasıyla taşınır. |
+| `TREADY` | Çıkış dolu ve alıcı hazır değilse düşer; pipeline ve BRAM adresi donar. |
+| `TLAST` | DMA karesinin son pikselini gösterir ve kare/sütun durumunu sıfırlar. |
+| `TUSER` | Çekirdek içinde değiştirilmeden taşınır; DMA wrapper girişte 0 bağlar. |
+| `TDATA` | Giriş `{B,G,R}`; çıkış `{0,up_delta,left_delta}`. |
+
+Normal durumda çekirdek her saat çevriminde bir piksel kabul eder. 100 MHz PL
+saatinde hesaplama kapasitesi 640×480×30 akış ihtiyacının üzerindedir; ölçülen
+uçtan uca hız kamera dönüşümü, DDR/cache işlemleri ve UDP aktarımını da içerir.
+
+## PS ve PL görev ayrımı
+
+| Aşama | Yer | İşlev |
+|---|---|---|
+| Kamera yakalama | PS/Linux | V4L2 MMAP, 640×480 YUYV |
+| Renk dönüşümü | PS | BT.601 limited YUYV → RGB888 |
+| Komşuluk farkı | PL/RTL | Sol ve üst piksele maksimum RGB kanal farkı |
+| Bölge büyütme | PS | 4×4 hücrelerde dört komşulu connected components |
+| RGB eleme | PS | Baskın kırmızı, yeşil ve mavi bölgeleri seçme |
+| Overlay | PS | Orijinal kareye üç piksel kalınlığında kutu |
+| Ağ ve görüntü | PS + PC | UDP paketleme, yeniden birleştirme, OpenCV |
 
 DMA wrapper 32 bit piksel kelimelerini kullanır. Giriş R,G,B,0; çıkış
 left,up,0,0. TKEEP=1111. İki DMA yönünde de kare uzunluğu 1,228,800 bayttır.
