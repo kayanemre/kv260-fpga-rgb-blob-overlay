@@ -1,0 +1,38 @@
+/dts-v1/;
+/plugin/;
+
+/* KV260 Ubuntu/Xilinx FPGA-manager overlay, based on the local working shell.
+ * Match these symbol names to the target image before loading. Do not stack this
+ * on another accelerator overlay. DMA is intentionally NOT kernel-driver bound.
+ */
+&fpga_full {
+    #address-cells = <2>;
+    #size-cells = <2>;
+    firmware-name = "kv260-blob-overlay.bit.bin";
+    resets = <&zynqmp_reset 116>, <&zynqmp_reset 117>,
+             <&zynqmp_reset 118>, <&zynqmp_reset 119>;
+};
+&amba {
+    color_afi: color-afi {
+        compatible = "xlnx,afi-fpga";
+        /* AFIFM2 = HP0, 64-bit; AFIFS HPM0 = 32-bit. */
+        config-afi = <0 0>, <1 0>, <2 0>, <3 0>, <4 1>, <5 1>,
+                     <6 0>, <7 0>, <8 0>, <9 0>, <10 0>, <11 0>,
+                     <12 0>, <13 0>, <14 0>, <15 0>;
+    };
+    color_clock: color-clock {
+        #clock-cells = <0>;
+        compatible = "xlnx,fclk";
+        assigned-clock-rates = <100000000>;
+        assigned-clocks = <&zynqmp_clk 71>;
+        clocks = <&zynqmp_clk 71>;
+        clock-output-names = "color_fabric_clk";
+    };
+    /* XRT 2022.1 zocl_get_zdev() requires this exact node name. */
+    color_zocl: zyxclmm_drm {
+        compatible = "xlnx,zocl";
+        status = "okay";
+        interrupt-parent = <&gic>;
+        interrupts = <0 89 4>, <0 90 4>;
+    };
+};
