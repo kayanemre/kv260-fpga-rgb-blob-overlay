@@ -1,19 +1,6 @@
 # Genel blob algılama ve canlı görüntü
 
-```mermaid
-flowchart LR
-    A[USB UVC<br/>640×480 YUYV] --> B[V4L2 + BT.601<br/>PS]
-    B --> C[(DDR RGBx)]
-    C --> D[DMA MM2S]
-    D --> E[AXI4-Stream<br/>RTL]
-    E --> F[DMA S2MM]
-    F --> G[(DDR edge map)]
-    G --> H[4×4 hücreler +<br/>connected components]
-    C --> H
-    H --> I[RGB sınıf filtresi +<br/>bounding boxes]
-    I --> J[UDP / GbE]
-    J --> K[PC OpenCV]
-```
+[![KV260 sistem, Vivado ve RTL blok diyagramı](architecture_block_diagram.svg)](architecture_block_diagram.svg)
 
 RTL herhangi bir sabit renk sınıfına bağlı değildir. PS'nin canlı
 `--primary-only` modu yalnız belirgin kırmızı, yeşil ve mavi blobları tutar;
@@ -24,22 +11,6 @@ genel blob kuralıyla değerlendirilebilir. Bu bir nesne tanıma modeli değildi
 
 Eski entegrasyon adı `color_detector_axis` korunur; işlev artık genel RGB
 komşuluk farkıdır. 24 bit giriş: düşük bayt R, sonra G, B.
-
-```mermaid
-flowchart LR
-    AXIIN[s_axis<br/>RGB24 + VALID/LAST/USER] --> S1[Pipeline stage 1<br/>pixel + left pixel]
-    S1 --> DIFFL[max abs channel diff<br/>LEFT]
-    RAM[640 × 24-bit<br/>read-first BRAM] --> DIFFU[max abs channel diff<br/>UP]
-    S1 --> DIFFU
-    S1 --> RAM
-    DIFFL --> S2[Pipeline stage 2]
-    DIFFU --> S2
-    S2 --> AXIOUT[m_axis<br/>0, up, left]
-    READY[m_axis_tready] --> STALL[Global pipeline enable]
-    STALL --> S1
-    STALL --> S2
-    STALL --> RAM
-```
 
 ```text
 left = max(abs(R-R_left), abs(G-G_left), abs(B-B_left))

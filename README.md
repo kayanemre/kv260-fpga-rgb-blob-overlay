@@ -7,45 +7,14 @@ hesaplar, PS bölgeleri birleştirip RGB filtresini ve kutuları uygular. Hedef 
 
 ## Sistem blok diyagramı
 
-```mermaid
-flowchart LR
-    CAM[USB UVC Kamera<br/>640×480 YUYV] --> V4L2[V4L2 yakalama<br/>PS / Linux]
-    V4L2 --> RGB[YUYV → RGB888<br/>PS yazılımı]
-    RGB --> IN[(DDR giriş tamponu<br/>R,G,B,0)]
-    IN --> MM2S[AXI DMA<br/>MM2S]
-    MM2S --> RTL[Handwritten RTL<br/>color_detector_axis]
-    RTL --> S2MM[AXI DMA<br/>S2MM]
-    S2MM --> OUT[(DDR fark haritası<br/>left,up,0,0)]
-    OUT --> BLOBS[PS connected-component<br/>RGB blob filtresi]
-    RGB --> BLOBS
-    BLOBS --> BOX[Orijinal görüntüye<br/>bounding box overlay]
-    BOX --> UDP[UDP paketleyici<br/>768 paket/kare]
-    UDP --> ETH[Gigabit Ethernet]
-    ETH --> PC[Python + OpenCV<br/>PC görüntüleme]
-```
+[![KV260 sistem ve RTL blok diyagramı](docs/architecture_block_diagram.svg)](docs/architecture_block_diagram.svg)
+
+[PNG olarak aç / indir](docs/architecture_block_diagram.png)
 
 PL, görüntüyü maskelemez: her piksel için soldaki ve üstteki komşuya olan RGB
 farkını üretir. PS bu fark haritasını orijinal RGB kareyle birlikte kullanarak
 bağlı bölgeleri bulur. Canlı ayarda yalnız baskın kırmızı, yeşil ve mavi bölgeler
 kalır; kutular orijinal görüntünün üzerine çizilir.
-
-### Vivado PL bağlantısı
-
-```mermaid
-flowchart LR
-    PS[Zynq UltraScale+ MPSoC PS] -->|M_AXI_HPM0_FPD<br/>AXI-Lite kontrol| CTRL[SmartConnect]
-    CTRL --> DMA[AXI DMA]
-    DMA -->|M_AXIS_MM2S<br/>32-bit AXI4-Stream| DET[color_detector_dma_wrapper]
-    DET -->|32-bit AXI4-Stream| DMA
-    DMA -->|M_AXI_MM2S + M_AXI_S2MM| MEM[Memory SmartConnect]
-    MEM -->|S_AXI_HP0_FPD 64-bit| PS
-    DMA -->|MM2S + S2MM IRQ| IRQ[Concat]
-    IRQ --> PS
-    PS -->|pl_clk0 100 MHz| DMA
-    PS -->|pl_clk0 100 MHz| DET
-    PS -->|pl_resetn0| RST[Processor System Reset]
-    RST --> DMA
-```
 
 RTL ayrıntıları, veri biçimleri ve backpressure davranışı için
 [mimari dokümanına](docs/architecture.md) bakın.

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08111f"/><stop offset="1" stop-color="#14233d"/>
+    </linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".28"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#a9bdd8"/>
+    </marker>
+    <style>
+      .title{font:700 34px Arial,sans-serif;fill:#f6f9ff}.subtitle{font:18px Arial,sans-serif;fill:#9fb2cc}
+      .section{font:700 22px Arial,sans-serif;fill:#dce9fb}.box{rx:16;stroke-width:2;filter:url(#shadow)}
+      .ps{fill:#123b42;stroke:#35d0ba}.pl{fill:#31245c;stroke:#a78bfa}.mem{fill:#493817;stroke:#f8c85a}
+      .io{fill:#17365a;stroke:#5fb2ff}.net{fill:#193a2b;stroke:#62d48c}.ctl{fill:#3c263f;stroke:#ed83db}
+      .label{font:700 18px Arial,sans-serif;fill:#fff;text-anchor:middle}.small{font:15px Arial,sans-serif;fill:#c7d6e8;text-anchor:middle}
+      .wire{fill:none;stroke:#a9bdd8;stroke-width:3;marker-end:url(#arrow)}.stream{stroke:#b99cff}.memory{stroke:#f8c85a}
+      .note{font:15px Arial,sans-serif;fill:#92a8c4}.pill{font:700 14px Arial,sans-serif;fill:#09111f;text-anchor:middle}
+    </style>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <text x="70" y="62" class="title">KV260 RGB Blob Overlay — Sistem ve RTL Blok Diyagramı</text>
+  <text x="70" y="94" class="subtitle">640×480 UVC kamera • AXI DMA • handwritten RTL • PS blob/overlay • UDP/OpenCV</text>
+
+  <text x="70" y="145" class="section">1. Uçtan uca veri akışı</text>
+  <g>
+    <rect x="65" y="175" width="180" height="105" class="box io"/><text x="155" y="214" class="label">USB UVC Kamera</text><text x="155" y="243" class="small">640×480 YUYV</text>
+    <rect x="285" y="175" width="190" height="105" class="box ps"/><text x="380" y="210" class="label">V4L2 / PS</text><text x="380" y="238" class="small">YUYV → RGB888</text><text x="380" y="259" class="small">Linux C++</text>
+    <rect x="515" y="175" width="160" height="105" class="box mem"/><text x="595" y="212" class="label">DDR Giriş</text><text x="595" y="241" class="small">R, G, B, 0</text>
+    <rect x="715" y="175" width="170" height="105" class="box pl"/><text x="800" y="209" class="label">DMA MM2S</text><text x="800" y="238" class="small">32-bit AXI Stream</text>
+    <rect x="925" y="165" width="215" height="125" class="box pl"/><text x="1032" y="205" class="label">color_detector</text><text x="1032" y="230" class="label">_axis RTL</text><text x="1032" y="260" class="small">left / up RGB farkı</text>
+    <rect x="1180" y="175" width="170" height="105" class="box pl"/><text x="1265" y="209" class="label">DMA S2MM</text><text x="1265" y="238" class="small">32-bit AXI Stream</text>
+    <rect x="1390" y="175" width="155" height="105" class="box mem"/><text x="1467" y="212" class="label">DDR Çıkış</text><text x="1467" y="241" class="small">left, up, 0, 0</text>
+    <path d="M245 227 H285" class="wire"/><path d="M475 227 H515" class="wire"/><path d="M675 227 H715" class="wire memory"/><path d="M885 227 H925" class="wire stream"/><path d="M1140 227 H1180" class="wire stream"/><path d="M1350 227 H1390" class="wire memory"/>
+  </g>
+
+  <g>
+    <rect x="365" y="330" width="230" height="105" class="box ps"/><text x="480" y="369" class="label">PS Blob Algılama</text><text x="480" y="397" class="small">4×4 hücre + bölgeler</text><text x="480" y="418" class="small">yalnız R / G / B filtresi</text>
+    <rect x="670" y="330" width="230" height="105" class="box ps"/><text x="785" y="369" class="label">Bounding Box</text><text x="785" y="397" class="small">orijinal RGB görüntü</text><text x="785" y="418" class="small">üzerine overlay</text>
+    <rect x="975" y="330" width="210" height="105" class="box net"/><text x="1080" y="369" class="label">UDP / GbE</text><text x="1080" y="397" class="small">768 paket / kare</text>
+    <rect x="1260" y="330" width="230" height="105" class="box io"/><text x="1375" y="369" class="label">PC Alıcı</text><text x="1375" y="397" class="small">Python + OpenCV</text><text x="1375" y="418" class="small">≈26.8 FPS ölçülen</text>
+    <path d="M1467 280 V305 H480 V330" class="wire"/><path d="M595 280 V305 H785 V330" class="wire memory"/><path d="M595 435 V460 H785 V435" class="wire memory"/><path d="M595 382 H670" class="wire"/><path d="M900 382 H975" class="wire"/><path d="M1185 382 H1260" class="wire"/>
+  </g>
+
+  <line x1="65" y1="500" x2="1535" y2="500" stroke="#334863" stroke-width="2"/>
+  <text x="70" y="545" class="section">2. Vivado PL bağlantısı</text>
+  <g>
+    <rect x="75" y="575" width="255" height="115" class="box ps"/><text x="202" y="614" class="label">Zynq MPSoC PS</text><text x="202" y="644" class="small">M_AXI_HPM0 kontrol</text><text x="202" y="666" class="small">S_AXI_HP0 DDR</text>
+    <rect x="395" y="575" width="190" height="115" class="box ctl"/><text x="490" y="614" class="label">SmartConnect</text><text x="490" y="644" class="small">AXI-Lite kontrol</text>
+    <rect x="650" y="565" width="210" height="135" class="box pl"/><text x="755" y="606" class="label">AXI DMA</text><text x="755" y="636" class="small">MM2S + S2MM</text><text x="755" y="660" class="small">simple mode</text>
+    <rect x="925" y="565" width="250" height="135" class="box pl"/><text x="1050" y="606" class="label">DMA Wrapper</text><text x="1050" y="636" class="small">32 ↔ 24 bit</text><text x="1050" y="660" class="small">AXI backpressure</text>
+    <rect x="1240" y="575" width="255" height="115" class="box mem"/><text x="1367" y="614" class="label">DDR SmartConnect</text><text x="1367" y="644" class="small">64-bit HP0 port</text>
+    <path d="M330 610 H395" class="wire"/><path d="M585 610 H650" class="wire"/><path d="M860 610 H925" class="wire stream"/><path d="M925 670 H860" class="wire stream"/><path d="M860 640 H1240" class="wire memory"/><path d="M1240 680 H860" class="wire memory"/><path d="M1367 575 V535 H202 V575" class="wire memory"/>
+    <rect x="85" y="714" width="145" height="30" rx="15" fill="#35d0ba"/><text x="157" y="735" class="pill">100 MHz PL clock</text>
+    <rect x="250" y="714" width="150" height="30" rx="15" fill="#ed83db"/><text x="325" y="735" class="pill">active-low reset</text>
+    <rect x="420" y="714" width="175" height="30" rx="15" fill="#f8c85a"/><text x="507" y="735" class="pill">DMA IRQ → PS</text>
+  </g>
+
+  <line x1="65" y1="785" x2="1535" y2="785" stroke="#334863" stroke-width="2"/>
+  <text x="70" y="830" class="section">3. Handwritten RTL iç yapısı — 1 piksel / saat</text>
+  <g>
+    <rect x="75" y="855" width="210" height="90" class="box io"/><text x="180" y="891" class="label">s_axis RGB24</text><text x="180" y="918" class="small">VALID / READY / LAST</text>
+    <rect x="350" y="855" width="225" height="90" class="box pl"/><text x="462" y="891" class="label">Pipeline Stage 1</text><text x="462" y="918" class="small">pixel + left pixel</text>
+    <rect x="640" y="855" width="220" height="90" class="box mem"/><text x="750" y="891" class="label">640×24 BRAM</text><text x="750" y="918" class="small">previous row</text>
+    <rect x="925" y="855" width="250" height="90" class="box pl"/><text x="1050" y="891" class="label">max |ΔR, ΔG, ΔB|</text><text x="1050" y="918" class="small">LEFT ve UP paralel</text>
+    <rect x="1240" y="855" width="265" height="90" class="box io"/><text x="1372" y="891" class="label">m_axis fark haritası</text><text x="1372" y="918" class="small">0, up_delta, left_delta</text>
+    <path d="M285 900 H350" class="wire stream"/><path d="M575 880 H640" class="wire memory"/><path d="M575 920 H925" class="wire stream"/><path d="M860 900 H925" class="wire memory"/><path d="M1175 900 H1240" class="wire stream"/>
+  </g>
+  <text x="800" y="980" class="note" text-anchor="middle">TREADY düşerse iki pipeline aşaması, BRAM adresi ve görüntü konumu birlikte donar • HLS kullanılmaz</text>
+</svg>
